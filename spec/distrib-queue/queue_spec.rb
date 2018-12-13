@@ -37,7 +37,7 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
     end
   end
 
-  describe '#send_status' do
+  describe '#status=' do
     subject! { client.send_status(:running) }
 
     specify do
@@ -51,22 +51,22 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
 
     specify do
       expect(subject).to eq(:item1)
-      expect(other_client.get).not_to be_nil
+      expect(other_client.items).to eq(['item1'])
       expect(other_client.status).to eq(:running)
       expect(other_queue.status).to eq(:not_started)
-      expect(other_queue.get).to be_nil
+      expect(other_queue.items).to be_empty
     end
 
     context 'with item' do
       before { client.put(:item2) }
 
-      specify { expect(other_client.get).to eq('item2') }
-      specify { expect(other_queue.get).to be_nil }
+      specify { expect(other_client.items).to eq(%w[item2 item1]) }
+      specify { expect(other_queue.items).to be_empty }
 
       context 'after getting an item' do
         before { other_client.get }
 
-        specify { expect(other_client.get).to eq('item1') }
+        specify { expect(other_client.items).to eq(['item1']) }
       end
     end
 
@@ -83,8 +83,7 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
       subject! { client.put(:item1, :item2) }
 
       specify do
-        expect(other_client.get).to eq('item2')
-        expect(other_client.get).to eq('item1')
+        expect(other_client.items).to eq(%w[item2 item1])
       end
 
       context 'with ignore after first put' do
@@ -121,28 +120,67 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
       end
     end
 
-    xcontext 'with lease' do
+    context 'with non-expired lease' do
+      let(:lease_timeout) { 999 }
+
+      before do
+        other_client.put(:item1)
+        other_client.get
+      end
+
+      specify { expect(subject).to be_nil }
     end
+
+    context 'with expired lease' do
+      let(:lease_timeout) { 100 }
+
+      before do
+        other_client.put(:item1)
+        other_client.get
+        other_client.expire_lease('item1')
+      end
+
+      specify { expect(subject).to eq('item1') }
+    end
+  end
+
+  describe '#expire_lease' do
+    let(:lease_timeout) { 100 }
+
+    before { client.put(:item) }
+
+    subject { client.expire_lease(:item) }
+
+    before do
+      client.put(:item)
+      client.get
+      subject
+    end
+
+    specify { expect(client.leases).to eq([]) }
+  end
+
+  describe '#renew_lease' do
+    let(:lease_timeout) { 100 }
+
+    subject { client.renew_lease(:item) }
+
+    before do
+      client.put(:item)
+      client.get
+      client.expire_lease(:item)
+      subject
+    end
+
+    specify { expect(client.leases).to eq(['item']) }
+  end
+
+  describe '#release' do
   end
 
   describe '#size' do
     subject { client.size }
 
     specify { expect(subject).to be_zero }
-  end
-
-  describe '#status_key' do
-    specify { expect(client.status_key).to eq('default:status') }
-  end
-
-  describe '#queue_key' do
-    specify { expect(client.queue_key).to eq('default:queue') }
-  end
-
-  describe '#key' do
-    specify do
-      expect(client.key('test')).to eq('default:test')
-      expect(other_queue.key('test')).to eq('other:test')
-    end
   end
 end
