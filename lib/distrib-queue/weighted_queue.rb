@@ -17,7 +17,8 @@ module DistribQueue
                    lease_timeout: nil,
                    ignore_after_first_put: false,
                    weight: nil,
-                   weights_key: 'weights')
+                   weights_key: 'weights',
+                   global_weights: false)
       super(redis,
             name: name,
             lease_timeout: lease_timeout,
@@ -25,6 +26,7 @@ module DistribQueue
       @initial_weight = 0
       @new_weight = weight || method(:default_new_weight)
       @weights_key = weights_key
+      @global_weights = global_weights
     end
 
     def items
@@ -40,8 +42,9 @@ module DistribQueue
     end
 
     def release(item)
-      old_weight = super
-      @redis.hset(weights_key, item, @new_weight.call(old_weight, item))
+      super
+      new_weight = @new_weight.call(current_weight(item), item)
+      @redis.hset(weights_key, item, new_weight)
     end
 
     private
@@ -51,15 +54,15 @@ module DistribQueue
     end
 
     def current_weight(item)
-      @redis.hget(weights_key, item) || @initial_weight
+      @redis.hget(weights_key, item).to_f || @initial_weight
     end
 
-    def default_new_weight(_old_weight, _item)
-      0
+    def default_new_weight(old_weight, _item)
+      old_weight
     end
 
     def weights_key
-      key(@weights_key)
+      @weights_key ||= global_weights ? @weights_key : key(@weights_key)
     end
   end
 end

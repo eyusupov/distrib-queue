@@ -8,15 +8,17 @@ RSpec.shared_context 'queue' do
     {
       ignore_after_first_put: ignore_after_first_put,
       lease_timeout: lease_timeout,
+      weight: weight_method,
       weights_key: weights_key,
-      weight: weight_method
+      global_weights: global_weights
     }.compact
   end
   # TODO: think what will happen if we have clients for same queue
   # with different options (with/no lease)
   let(:client) { described_class.new(redis, options) }
   let(:other_client) { described_class.new(redis, options) }
-  let(:other_queue) { described_class.new(redis, name: 'other') }
+  let(:other_queue) { described_class.new(redis, name: 'other', **options) }
   let(:ignore_after_first_put) { false }
   let(:lease_timeout) { nil }
+  let(:global_weights) { nil }
 end
