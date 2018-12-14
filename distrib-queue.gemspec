@@ -1,7 +1,7 @@
 require File.expand_path('lib/distrib-queue/version', __dir__)
 
 Gem::Specification.new do |s|
-  s.name = 'distribqueue'
+  s.name = 'distrib-queue'
   s.version = DistribQueue::VERSION
 
   s.date = '2018-12-13'
