@@ -21,4 +21,12 @@ RSpec.shared_context 'queue' do
   let(:ignore_after_first_put) { false }
   let(:lease_timeout) { nil }
   let(:global_weights) { nil }
+
+  around(:each) do |example|
+    client.cleanup
+    other_queue.cleanup
+    example.run
+    client.cleanup
+    other_queue.cleanup
+  end
 end

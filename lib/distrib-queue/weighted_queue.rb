@@ -27,6 +27,7 @@ module DistribQueue
       @new_weight = weight || method(:default_new_weight)
       @weights_key = weights_key
       @global_weights = global_weights
+      @keys << weights_key
     end
 
     def items

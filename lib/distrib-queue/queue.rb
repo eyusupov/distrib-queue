@@ -15,6 +15,7 @@ module DistribQueue
       @lease_timeout = lease_timeout
       @redis = redis
       @queue_name = name
+      @keys = [leases_key, status_key, queue_key, leased_key]
     end
 
     def status
@@ -60,6 +61,10 @@ module DistribQueue
 
     def items
       @redis.lrange(queue_key, 0, -1)
+    end
+
+    def cleanup
+      @redis.del(*@keys)
     end
 
     def leases
