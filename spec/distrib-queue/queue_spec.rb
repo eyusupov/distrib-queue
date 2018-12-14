@@ -1,19 +1,9 @@
+# frozen_string_literal: true
+
 require 'redis'
 require 'distrib-queue/queue'
 
 RSpec.describe DistribQueue::Queue, :aggregate_failures do
-  def cleanup
-    keys = redis.keys
-    redis.del(keys) unless keys.empty?
-  end
-
-  around(:each) do |example|
-    cleanup
-    # TODO: only used keys
-    example.run
-    cleanup
-  end
-
   let(:redis) { Redis.new }
   let(:options) do
     {
