@@ -1,14 +1,80 @@
+# frozen_string_literal: true
+
 module DistribQueue
   # Redis-backed queue with support for leases.
   class Queue
+    # TODO: redis.script, evalsha
+    CHECK_PUT_SCRIPT = <<~SCRIPT
+      local status_key = KEYS[1]
+      local ignore_after_first_put = ARGV[1]
+      local status = redis.call('get', status_key)
+
+      if ignore_after_first_put == "false" or status == false then
+        redis.call('set', status_key, 'receiving')
+        return true
+      else
+        return false
+      end
+    SCRIPT
+
+    GET_SCRIPT = <<~SCRIPT
+      local queue_key = KEYS[1]
+      local leases_key = KEYS[2]
+      local status_key = KEYS[3]
+      local lease_timeout = tonumber(ARGV[1])
+
+      local item = redis.call("lpop", queue_key)
+      if (not item) and (lease_timeout > 0) then
+        local leases = redis.call('hgetall', leases_key)
+        for i = 1, #leases, 2 do
+          local lease_key = leases[i + 1]
+          if redis.call('exists', lease_key) == 0 then
+            item = leases[i]
+            redis.call('expire', lease_key, lease_timeout)
+            break
+          end
+        end
+      end
+
+      if not item then
+        redis.call('set', status_key, 'empty', 'XX')
+      end
+
+      return item
+    SCRIPT
+
+    LEASE_SCRIPT = <<~SCRIPT
+      local leases_key = KEYS[1]
+      local lease_key = KEYS[2]
+      local item = ARGV[1]
+      local lease_timeout = tonumber(ARGV[2])
+
+      redis.call('hset', leases_key, item, lease_key)
+      redis.call('setex', lease_key, lease_timeout, '')
+    SCRIPT
+
+    LEASES_SCRIPT = <<~SCRIPT
+      local leases_key = KEYS[1]
+
+      local result = {}
+      local leases = redis.call('hgetall', leases_key)
+      for i = 1, #leases, 2 do
+        local lease_key = leases[i + 1]
+        if redis.call('exists', lease_key) == 1 then
+          result[#result + 1] = leases[i]
+        end
+      end
+      return result
+    SCRIPT
+
     def initialize(redis,
                    name: 'default',
-                   ignore_after_first_put: false,
-                   lease_timeout: nil)
-      @redis = redis
-      @queue_name = name
+                   lease_timeout: nil,
+                   ignore_after_first_put: false)
       @ignore_after_first_put = ignore_after_first_put
       @lease_timeout = lease_timeout
+      @redis = redis
+      @queue_name = name
     end
 
     def status
@@ -21,7 +87,7 @@ module DistribQueue
     end
 
     def put(*items)
-      return if status != :not_started && @ignore_after_first_put
+      return unless receive_specs?
 
       @redis.lpush(queue_key, items)
       send_status('running')
@@ -29,13 +95,11 @@ module DistribQueue
     end
 
     def get
-      item = @redis.lpop(queue_key) || expired_item
-      if item.nil?
-        send_status('empty') if status != :not_started
-        return
-      end
-      lease(item) if @lease_timeout
-      item
+      @redis.eval(
+        GET_SCRIPT,
+        [queue_key, leases_key, status_key],
+        [@lease_timeout || 0]
+      ).tap { |item| lease(item) }
     end
 
     def expire_lease(item)
@@ -47,7 +111,7 @@ module DistribQueue
     end
 
     def release(item)
-      @redis.hdel(leases_key, item, key)
+      @redis.hdel(leases_key, item)
     end
 
     def size
@@ -59,24 +123,21 @@ module DistribQueue
     end
 
     def leases
-      @redis.hgetall(leases_key)
-            .select { |_, lease_key| @redis.exists(lease_key) }
-            .keys
+      return [] unless use_lease?
+
+      @redis.eval(LEASES_SCRIPT, [leases_key])
     end
 
     private
 
-    def expired_item
-      return unless @lease_timeout
-
-      @redis.hgetall(leases_key)
-            .each.find { |_, key| !@redis.exists(key) }&.first
+    def receive_specs?
+      @redis.eval(CHECK_PUT_SCRIPT, [status_key], [@ignore_after_first_put])
     end
 
     def lease(item)
-      key = lease_key(item)
-      @redis.hset(leases_key, item, key)
-      @redis.setex(key, @lease_timeout, nil)
+      return unless use_lease?
+
+      @redis.eval(LEASE_SCRIPT, [leases_key, lease_key(item)], [item, @lease_timeout])
     end
 
     def leases_key
@@ -101,6 +162,10 @@ module DistribQueue
 
     def key(name)
       "#{@queue_name}:#{name}"
+    end
+
+    def use_lease?
+      !@lease_timeout.nil?
     end
   end
 end

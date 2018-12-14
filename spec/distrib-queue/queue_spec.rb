@@ -115,7 +115,7 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
 
         specify do
           expect(subject).to be_nil
-          expect(client.status).to be(:empty)
+          expect(client.status).to eq(:empty)
         end
       end
     end
@@ -176,6 +176,33 @@ RSpec.describe DistribQueue::Queue, :aggregate_failures do
   end
 
   describe '#release' do
+    let(:lease_timeout) { 100 }
+
+    subject { client.release(:item) }
+
+    before do
+      client.put(:item)
+      client.get
+      subject
+    end
+
+    specify do
+      expect(client.leases).to be_empty
+      expect(client.items).to be_empty
+    end
+  end
+
+  describe '#leases' do
+    let(:lease_timeout) { 100 }
+
+    before do
+      client.put(:item1)
+      client.put(:item2)
+      client.get
+      client.get
+    end
+
+    specify { expect(client.leases).to contain_exactly('item1', 'item2') }
   end
 
   describe '#size' do
