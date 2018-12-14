@@ -45,7 +45,7 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
 
       specify do
         expect { other_client.put(:item2) }
-          .not_to change { other_client.size }.from(1)
+          .not_to change { other_client.count }.from(1)
       end
     end
 
@@ -61,7 +61,7 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
 
         specify do
           expect { other_client.put(:item3, :item4) }
-            .not_to change { other_client.size }.from(2)
+            .not_to change { other_client.count }.from(2)
         end
       end
     end
@@ -188,9 +188,24 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
     specify { expect(client.leases).to contain_exactly('item1', 'item2') }
   end
 
-  describe '#size' do
-    subject { client.size }
+  describe '#count' do
+    subject { client.count }
 
     specify { expect(subject).to be_zero }
+  end
+
+  describe '#leases_count' do
+    subject { client.leases_count }
+
+    let(:lease_timeout) { 100 }
+
+    before do
+      client.put(:item1)
+      client.put(:item2)
+      client.get
+      client.get
+    end
+
+    specify { expect(subject).to eq(2) }
   end
 end

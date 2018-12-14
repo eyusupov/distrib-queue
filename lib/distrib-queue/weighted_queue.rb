@@ -34,7 +34,7 @@ module DistribQueue
       @redis.zrangebyscore(queue_key, -Float::INFINITY, Float::INFINITY)
     end
 
-    def size
+    def count 
       @redis.zcount(queue_key, -Float::INFINITY, Float::INFINITY)
     end
 

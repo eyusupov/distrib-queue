@@ -36,11 +36,10 @@ module DistribQueue
     end
 
     def get
-      @redis.eval(
-        self.class.get_script,
-        [queue_key, leases_key, status_key],
-        [@lease_timeout || 0]
-      ).tap { |item| lease(item) }
+      @redis.eval(self.class.get_script,
+                  [queue_key, leases_key, status_key],
+                  [@lease_timeout || 0])
+            .tap { |item| lease(item) }
     end
 
     def expire_lease(item)
@@ -55,7 +54,11 @@ module DistribQueue
       @redis.hdel(leases_key, item)
     end
 
-    def size
+    def leases_count
+      @redis.hlen(leases_key)
+    end
+
+    def count
       @redis.llen(queue_key)
     end
 
@@ -76,14 +79,17 @@ module DistribQueue
     private
 
     def receive_specs?
-      @redis.eval(self.class.check_put_script, [status_key], [@ignore_after_first_put])
+      @redis.eval(self.class.check_put_script,
+                  [status_key],
+                  [@ignore_after_first_put])
     end
 
     def lease(item)
       return unless use_lease?
 
       @redis.eval(self.class.lease_script,
-                  [leases_key, lease_key(item)], [item, @lease_timeout])
+                  [leases_key, lease_key(item)],
+                  [item, @lease_timeout])
     end
 
     def add_to_queue(items)
