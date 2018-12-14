@@ -72,7 +72,6 @@ RSpec.describe DistribQueue::WeightedQueue, :aggregate_failures do
           populate_weights
           other_client.put('item1')
           other_client.put('item2')
-          puts(client.weights)
         end
 
         specify { expect(subject).to eq('item2') }
