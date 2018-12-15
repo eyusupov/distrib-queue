@@ -33,6 +33,8 @@ module DistribQueue
               item = leases[i]
               redis.call('expire', lease_key, lease_timeout)
               break
+            else
+              redis.call('hdel', leases_key, lease_key)
             end
           end
         SNIPPET
@@ -51,7 +53,8 @@ module DistribQueue
             #{get_leased_snippet}
           end
 
-          if not item then
+          local leased = redis.call('hlen', leases_key)
+          if not item and leased == 0 then
             redis.call('set', status_key, 'empty', 'XX')
           end
 

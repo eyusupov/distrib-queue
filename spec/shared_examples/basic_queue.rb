@@ -87,6 +87,19 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
           expect(subject).to be_nil
           expect(client.status).to eq(:empty)
         end
+
+        context 'if there exists leased item' do
+          let(:lease_timeout) { 999 }
+          before do
+            other_client.put(:item)
+            other_client.get
+          end
+
+          specify do
+            expect(subject).to be_nil
+            expect(client.status).to eq(:running)
+          end
+        end
       end
 
       context 'with two items' do
