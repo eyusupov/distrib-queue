@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'distrib-queue/queue/scripts'
+require 'distrib-queue/scripts/queue'
 
 module DistribQueue
   # Redis-backed queue with support for leases.
   class Queue
-    extend Scripts
+    extend Scripts::Queue
 
     def initialize(redis,
                    name: 'default',

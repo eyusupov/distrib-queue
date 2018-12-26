@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module DistribQueue
-  class Queue
-    module Scripts
+  class Scripts
+    module Queue
       def check_put_script
         @check_put_script ||= <<~SCRIPT
           local status_key = KEYS[1]
