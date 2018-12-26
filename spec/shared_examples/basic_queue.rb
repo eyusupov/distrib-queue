@@ -116,27 +116,37 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
       # TODO: Ordering
     end
 
-    context 'with non-expired lease' do
+    context 'with lease' do
       let(:lease_timeout) { 999 }
 
-      before do
-        other_client.put(:item1)
-        other_client.get
+      describe 'non-expired' do
+        before do
+          other_client.put(:item1)
+          other_client.get
+        end
+
+        specify { expect(subject).to be_nil }
       end
 
-      specify { expect(subject).to be_nil }
-    end
+      describe 'expired' do
+        before do
+          other_client.put(:item1)
+          other_client.get
+          other_client.expire_lease('item1')
+        end
 
-    context 'with expired lease' do
-      let(:lease_timeout) { 100 }
-
-      before do
-        other_client.put(:item1)
-        other_client.get
-        other_client.expire_lease('item1')
+        specify { expect(subject).to eq('item1') }
       end
 
-      specify { expect(subject).to eq('item1') }
+      context 'with two items' do
+        before do
+          other_client.put(:item1)
+          other_client.put(:item2)
+          other_client.get
+        end
+
+        specify { expect(subject).to eq('item1') }
+      end
     end
   end
 
