@@ -1,10 +1,14 @@
 # frozen_string_literal: true
+#
+require 'distrib-queue/scripts/sync'
 
 module DistribQueue
   # Synchronization primitive. Allows to get set, get and wait for status
   class Sync
+    extend Scripts::Sync
+
     def initialize(redis,
-                   key: ,
+                   key:,
                    default: nil)
       @redis = redis
       @key = key
@@ -16,11 +20,11 @@ module DistribQueue
     end
 
     def set(status)
-      @redis.set(@key, status)
-      status
+      @redis.eval(self.class.set_get_script, [@key], [status])
+        &.to_sym || @default
     end
 
-    def wait(new_status)
+    def wait(old_status: nil)
     end
 
     def cleanup()

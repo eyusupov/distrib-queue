@@ -33,7 +33,7 @@ RSpec.describe DistribQueue::Sync, :aggregate_failures do
     let(:default) { :default }
     subject { client.set(:status) }
 
-    it { is_expected.to eq(:status) }
+    it { is_expected.to eq(:default) }
     specify { expect { subject }.to change { client.get }.to(:status) }
     specify { expect { subject }.to change { other_client.get }.to(:status) }
     specify { expect { subject }.not_to change { other_key.get }.from(:default) }
