@@ -9,9 +9,7 @@ module DistribQueue
 
     def initialize(redis,
                    name: 'default',
-                   lease_timeout: nil,
-                   ignore_after_first_put: false)
-      @ignore_after_first_put = ignore_after_first_put
+                   lease_timeout: nil)
       @lease_timeout = lease_timeout
       @redis = redis
       @queue_name = name
@@ -28,8 +26,6 @@ module DistribQueue
     end
 
     def put(*items)
-      return unless receive_specs?
-
       add_to_queue(items)
       send_status('running')
       items.size == 1 ? items.first : items
@@ -77,12 +73,6 @@ module DistribQueue
     end
 
     private
-
-    def receive_specs?
-      @redis.eval(self.class.check_put_script,
-                  [status_key],
-                  [@ignore_after_first_put])
-    end
 
     def lease(item)
       return unless use_lease?

@@ -3,21 +3,6 @@
 module DistribQueue
   class Scripts
     module Queue
-      def check_put_script
-        @check_put_script ||= <<~SCRIPT
-          local status_key = KEYS[1]
-          local ignore_after_first_put = ARGV[1]
-          local status = redis.call('get', status_key)
-
-          if ignore_after_first_put == "false" or status == false then
-            redis.call('set', status_key, 'receiving')
-            return true
-          else
-            return false
-          end
-        SCRIPT
-      end
-
       def get_from_queue_snippet
         @get_from_queue_snippet ||= <<~SNIPPET
           local item = redis.call("lpop", queue_key)

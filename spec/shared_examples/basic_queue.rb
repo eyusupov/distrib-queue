@@ -40,29 +40,11 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
       specify { expect(other_queue.items).to be_empty }
     end
 
-    context 'with ignore after first put' do
-      let(:ignore_after_first_put) { true }
-
-      specify do
-        expect { other_client.put(:item2) }
-          .not_to change { other_client.count }.from(1)
-      end
-    end
-
     context 'multiple items' do
       subject! { client.put(:item1, :item2) }
 
       specify do
         expect(other_client.items).to match_array(%w[item2 item1])
-      end
-
-      context 'with ignore after first put' do
-        let(:ignore_after_first_put) { true }
-
-        specify do
-          expect { other_client.put(:item3, :item4) }
-            .not_to change { other_client.count }.from(2)
-        end
       end
     end
   end

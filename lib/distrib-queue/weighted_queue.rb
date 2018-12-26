@@ -15,14 +15,12 @@ module DistribQueue
     def initialize(redis,
                    name: 'default',
                    lease_timeout: nil,
-                   ignore_after_first_put: false,
                    weight: nil,
                    weights_key: 'weights',
                    global_weights: false)
       super(redis,
             name: name,
-            lease_timeout: lease_timeout,
-            ignore_after_first_put: ignore_after_first_put)
+            lease_timeout: lease_timeout)
       @initial_weight = 0
       @new_weight = weight || method(:default_new_weight)
       @weights_key = weights_key
