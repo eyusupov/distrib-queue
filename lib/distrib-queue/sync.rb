@@ -25,6 +25,14 @@ module DistribQueue
     end
 
     def wait(old_status: nil)
+      # not optimal and not very testable, think of something
+      status = nil
+      loop do
+        status = get
+        break if status != old_status
+        sleep 1
+      end
+      return status
     end
 
     def cleanup()

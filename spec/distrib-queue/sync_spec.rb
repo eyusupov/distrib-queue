@@ -40,6 +40,12 @@ RSpec.describe DistribQueue::Sync, :aggregate_failures do
   end
 
   describe 'wait' do
+    let(:default) { :default }
+    before { client.set(:new_status) }
+
+    subject { client.wait(old_status: :default) }
+
+    it { is_expected.to eq(:new_status) }
   end
 
   describe '#cleanup' do
