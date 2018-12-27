@@ -1,0 +1,1 @@
+require 'distrib-queue/tasks'

@@ -29,13 +29,14 @@ module DistribQueue
       status = nil
       loop do
         status = get
-        break if status != old_status
+        break if status != old_status.to_sym
+
         sleep 1
       end
-      return status
+      status
     end
 
-    def cleanup()
+    def cleanup
       @redis.del(@key)
     end
   end
