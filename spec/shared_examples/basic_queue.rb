@@ -5,31 +5,12 @@ require 'shared_contexts/queue'
 RSpec.shared_examples 'basic queue', aggregate_failures: true do
   include_context 'queue'
 
-  describe '#status' do
-    specify do
-      expect(client.status).to eq(:not_started)
-      expect(other_client.status).to eq(:not_started)
-      expect(other_queue.status).to eq(:not_started)
-    end
-  end
-
-  describe '#status=' do
-    subject! { client.send_status(:running) }
-
-    specify do
-      expect(subject).to eq(:running)
-      expect(other_client.status).to eq(:running)
-    end
-  end
-
   describe '#put' do
     subject! { client.put(:item1) }
 
     specify do
       expect(subject).to eq(:item1)
       expect(other_client.items).to eq(['item1'])
-      expect(other_client.status).to eq(:running)
-      expect(other_queue.status).to eq(:not_started)
       expect(other_queue.items).to be_empty
     end
 
@@ -53,9 +34,6 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
     subject { client.get }
 
     specify { expect(subject).to eq(nil) }
-    specify do
-      expect { subject }.not_to change { client.status }.from(:not_started)
-    end
 
     context 'with item' do
       before { other_client.put(:item) }
@@ -67,7 +45,6 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
 
         specify do
           expect(subject).to be_nil
-          expect(client.status).to eq(:empty)
         end
 
         context 'if there exists leased item' do
@@ -79,7 +56,6 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
 
           specify do
             expect(subject).to be_nil
-            expect(client.status).to eq(:running)
           end
         end
       end
@@ -92,7 +68,6 @@ RSpec.shared_examples 'basic queue', aggregate_failures: true do
 
         specify do
           expect(subject).to eq('item')
-          expect(client.status).to eq(:running)
         end
       end
       # TODO: Ordering

@@ -13,27 +13,17 @@ module DistribQueue
       @lease_timeout = lease_timeout
       @redis = redis
       @queue_name = name
-      @keys = [leases_key, status_key, queue_key, leased_key]
-    end
-
-    def status
-      (@redis.get(status_key) || :not_started).to_sym
-    end
-
-    def send_status(status)
-      @redis.set(status_key, status)
-      status
+      @keys = [leases_key, queue_key, leased_key]
     end
 
     def put(*items)
       add_to_queue(items)
-      send_status('running')
       items.size == 1 ? items.first : items
     end
 
     def get
       @redis.eval(self.class.get_script,
-                  [queue_key, leases_key, status_key],
+                  [queue_key, leases_key],
                   [@lease_timeout || 0])
             .tap { |item| lease(item) }
     end
@@ -92,10 +82,6 @@ module DistribQueue
 
     def lease_key(item)
       key("leases:#{Digest::SHA2.hexdigest item.to_s}")
-    end
-
-    def status_key
-      key('status')
     end
 
     def queue_key

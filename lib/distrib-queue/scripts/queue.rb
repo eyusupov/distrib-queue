@@ -29,7 +29,6 @@ module DistribQueue
         @get_script ||= <<~SCRIPT
           local queue_key = KEYS[1]
           local leases_key = KEYS[2]
-          local status_key = KEYS[3]
           local lease_timeout = tonumber(ARGV[1])
 
           #{get_from_queue_snippet}
@@ -39,9 +38,6 @@ module DistribQueue
           end
 
           local leased = redis.call('hlen', leases_key)
-          if not item and leased == 0 then
-            redis.call('set', status_key, 'empty', 'XX')
-          end
 
           return item
         SCRIPT
