@@ -24,6 +24,11 @@ module DistribQueue
         &.to_sym || @default
     end
 
+    def change(old_status, new_status)
+      @redis.eval(self.class.change_script, [@key], [old_status, new_status])
+        &.to_sym || @default
+    end
+
     def wait(old_status: nil)
       # not optimal and not very testable, think of something
       status = nil

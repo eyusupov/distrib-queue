@@ -39,6 +39,22 @@ RSpec.describe DistribQueue::Sync, :aggregate_failures do
     specify { expect { subject }.not_to change { other_key.get }.from(:default) }
   end
 
+  describe '#change' do
+    subject { client.change(:old, :new) }
+
+    context 'with old subject matching' do
+      before { client.set(:old) }
+      specify { expect { subject }.to change { client.get }.to(:new) }
+      specify { expect(subject).to eq(:old) }
+    end
+
+    context 'with old subject not maching' do
+      before { client.set(:young) }
+      specify { expect { subject }.not_to change { client.get }.from(:young) }
+      specify { expect(subject).to eq(:young) }
+    end
+  end
+
   describe 'wait' do
     let(:default) { :default }
     before { client.set(:new_status) }
