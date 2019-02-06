@@ -26,7 +26,7 @@ module DistribQueue
 
     def change(old_status, new_status)
       @redis.eval(self.class.change_script, [@key], [old_status, new_status])
-        &.to_sym || @default
+        &.to_sym
     end
 
     def wait(old_status: nil)

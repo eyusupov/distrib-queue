@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'redis'
 require 'distrib-queue/sync'
 
 RSpec.describe DistribQueue::Sync, :aggregate_failures do
@@ -42,16 +43,32 @@ RSpec.describe DistribQueue::Sync, :aggregate_failures do
   describe '#change' do
     subject { client.change(:old, :new) }
 
-    context 'with old subject matching' do
+    context 'with old value matching' do
       before { client.set(:old) }
       specify { expect { subject }.to change { client.get }.to(:new) }
       specify { expect(subject).to eq(:old) }
     end
 
-    context 'with old subject not maching' do
+    context 'with old value not maching' do
       before { client.set(:young) }
       specify { expect { subject }.not_to change { client.get }.from(:young) }
       specify { expect(subject).to eq(:young) }
+    end
+
+
+    context 'without old value' do
+      subject { client.change(nil, :new) }
+
+      describe 'matching' do
+        specify { expect { subject }.to change { client.get }.to(:new) }
+        specify { expect(subject).to be_nil }
+      end
+
+      context 'not matching' do
+        before { client.set(:young) }
+        specify { expect { subject }.not_to change { client.get }.from(:young) }
+        specify { expect(subject).to eq(:young) }
+      end
     end
   end
 

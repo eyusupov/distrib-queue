@@ -15,11 +15,13 @@ module DistribQueue
 
       def change_script
         @change_script ||= <<~SCRIPT
+          redis.log(redis.LOG_WARNING, 'begin')
           local key = KEYS[1]
           local expected_status = ARGV[1]
           local new_status = ARGV[2]
           local old_status = redis.call('get', key)
-          if old_status == expected_status then
+
+          if old_status == expected_status or (not old_status and expected_status == '') then
             redis.call('set',key, new_status)
           end
           return old_status
