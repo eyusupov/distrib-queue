@@ -3,18 +3,11 @@
 require 'distrib-queue/weighted_queue'
 require 'shared_examples/basic_queue'
 
-def populate_weights
-  other_client.put('item1')
-  other_client.release('item1')
-  other_client.put('item2')
-  other_client.release('item2')
-end
-
 RSpec.describe DistribQueue::WeightedQueue, :aggregate_failures do
   include_context 'queue'
 
   # largest go first, for compatibility with basic queue tests
-  let(:weight_method) { proc { |_, item| item.to_s.gsub(/^item/, '').to_i } }
+  let(:weight_method) { ->(_, new_weight, _) { new_weight } }
   let(:weights_key) { nil }
 
   it_behaves_like 'basic queue'
@@ -35,17 +28,23 @@ RSpec.describe DistribQueue::WeightedQueue, :aggregate_failures do
 
     before do
       client.put(:item10)
-      client.release(:item10)
+      client.release(:item10, 10)
     end
 
     specify { expect(client.weights).to eq('item10' => 10.0) }
   end
 
+  def populate_weights
+    other_client.put('item1')
+    other_client.release('item1', 1)
+    other_client.put('item2')
+    other_client.release('item2', 2)
+  end
+
   describe '#get' do
     let(:weight_method) do
-      # Reverse order to check the functionality and then reverse it again
-      # to check that old weight is used
-      lambda { |old_weight, item| old_weight != 0 ? -old_weight : -item.to_s.gsub(/^item/, '').to_i }
+      # Reverse the fetch order for the second iteration
+      ->(old_weight, new_weight, _) { old_weight.zero? ? -new_weight : -old_weight }
     end
 
     context 'with weight' do

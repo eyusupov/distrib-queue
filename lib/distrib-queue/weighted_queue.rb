@@ -32,7 +32,7 @@ module DistribQueue
       @redis.zrangebyscore(queue_key, -Float::INFINITY, Float::INFINITY)
     end
 
-    def count 
+    def count
       @redis.zcount(queue_key, -Float::INFINITY, Float::INFINITY)
     end
 
@@ -40,9 +40,9 @@ module DistribQueue
       @redis.hgetall(weights_key).transform_values(&:to_f)
     end
 
-    def release(item)
-      super
-      new_weight = @new_weight.call(current_weight(item), item)
+    def release(item, new_weight = nil)
+      super(item)
+      new_weight = @new_weight.call(current_weight(item), new_weight, item)
       @redis.hset(weights_key, item, new_weight)
     end
 
@@ -56,8 +56,8 @@ module DistribQueue
       @redis.hget(weights_key, item).to_f || @initial_weight
     end
 
-    def default_new_weight(old_weight, _item)
-      old_weight
+    def default_new_weight(_old_weight, new_weight, _item)
+      new_value
     end
 
     def weights_key
