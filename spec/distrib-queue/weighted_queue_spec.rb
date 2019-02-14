@@ -10,7 +10,10 @@ RSpec.describe DistribQueue::WeightedQueue, :aggregate_failures do
   let(:weight_method) { ->(_, new_weight, _) { new_weight } }
   let(:weights_key) { nil }
 
-  it_behaves_like 'basic queue'
+  context 'default weight' do
+    let(:weight_method) { nil }
+    it_behaves_like 'basic queue'
+  end
 
   describe '#weights' do
     subject { client.weights }

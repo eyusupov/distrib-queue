@@ -57,7 +57,7 @@ module DistribQueue
     end
 
     def default_new_weight(_old_weight, new_weight, _item)
-      new_value
+      new_weight
     end
 
     def weights_key
